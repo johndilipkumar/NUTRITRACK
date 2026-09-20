@@ -1,0 +1,54 @@
+name: nutritrack
+description: "NutriTrack - AI-Powered Food Nutrition Tracker"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # HTTP Client
+  dio: ^5.7.0
+
+  # Image Picker
+  image_picker: ^1.1.2
+
+  # Charts
+  fl_chart: ^0.70.2
+
+  # Date Formatting
+  intl: ^0.20.2
+
+  # Local Storage (theme preference, auth token only)
+  shared_preferences: ^2.5.3
+
+  # Cached Network Images
+  cached_network_image: ^3.4.1
+  google_fonts: ^8.2.1
+  supabase_flutter: ^2.17.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/icon.png"
+  min_sdk_android: 21

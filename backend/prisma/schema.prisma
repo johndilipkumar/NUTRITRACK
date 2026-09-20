@@ -1,0 +1,114 @@
+// Prisma schema for NutriTrack food tracker database
+// Uses PostgreSQL as the data store
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── User account ───────────────────────────────────────────────────────
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  name              String?
+  age               Int?
+  gender            String?   // male, female, other, prefer_not_to_say
+  heightCm          Float?    @map("height_cm")
+  weightKg          Float?    @map("weight_kg")
+  activityLevel     String?   @map("activity_level") // sedentary, light, moderate, active, very_active
+  dailyCalorieGoal  Int       @default(2000) @map("daily_calorie_goal")
+  dietaryPreference String?   @map("dietary_preference") // none, vegetarian, vegan, keto, paleo, etc.
+  resetToken        String?   @map("reset_token")
+  resetTokenExpiry  DateTime? @map("reset_token_expiry")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  foodEntries    FoodEntry[]
+  dailyNutrition DailyNutrition[]
+
+  @@map("users")
+}
+
+// ─── A single meal/scan entry ───────────────────────────────────────────
+model FoodEntry {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  imageUrl        String?  @map("image_url")
+  mealName        String   @map("meal_name")
+  mealType        String   @default("snack") @map("meal_type") // breakfast, lunch, dinner, snack
+  totalCalories   Float    @default(0) @map("total_calories")
+  totalProtein    Float    @default(0) @map("total_protein")
+  totalCarbs      Float    @default(0) @map("total_carbs")
+  totalFat        Float    @default(0) @map("total_fat")
+  totalFiber      Float    @default(0) @map("total_fiber")
+  totalSugar      Float    @default(0) @map("total_sugar")
+  totalSodium     Float    @default(0) @map("total_sodium")
+  nutritionScore  Int      @default(0) @map("nutrition_score")
+  classification  String   @default("unknown")
+  confidence      Float    @default(0)
+  disclaimer      String?
+  isManualEntry   Boolean  @default(false) @map("is_manual_entry")
+  overallPositive Json?    @map("overall_positive") // JSON array of positive points
+  overallConcerns Json?    @map("overall_concerns") // JSON array of concerns
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items FoodItem[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("food_entries")
+}
+
+// ─── Individual food items within a meal ────────────────────────────────
+model FoodItem {
+  id                  String  @id @default(uuid())
+  foodEntryId         String  @map("food_entry_id")
+  name                String
+  category            String  @default("food") // food, drink, snack, dessert, packaged
+  estimatedPortion    String? @map("estimated_portion")
+  calories            Float   @default(0)
+  proteinG            Float   @default(0) @map("protein_g")
+  carbsG              Float   @default(0) @map("carbs_g")
+  fatG                Float   @default(0) @map("fat_g")
+  fiberG              Float   @default(0) @map("fiber_g")
+  sugarG              Float   @default(0) @map("sugar_g")
+  sodiumMg            Float   @default(0) @map("sodium_mg")
+  nutritionScore      Int     @default(0) @map("nutrition_score")
+  classification      String  @default("unknown")
+  confidence          Float   @default(0)
+  positivePoints      Json?   @map("positive_points") // JSON array
+  concerns            Json?   // JSON array
+  healthierAlternative String? @map("healthier_alternative")
+
+  foodEntry FoodEntry @relation(fields: [foodEntryId], references: [id], onDelete: Cascade)
+
+  @@map("food_items")
+}
+
+// ─── Aggregated daily nutrition (cache for fast dashboard queries) ─────
+model DailyNutrition {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  date          DateTime @db.Date
+  totalCalories Float    @default(0) @map("total_calories")
+  totalProtein  Float    @default(0) @map("total_protein")
+  totalCarbs    Float    @default(0) @map("total_carbs")
+  totalFat      Float    @default(0) @map("total_fat")
+  totalFiber    Float    @default(0) @map("total_fiber")
+  totalSugar    Float    @default(0) @map("total_sugar")
+  totalSodium   Float    @default(0) @map("total_sodium")
+  mealCount     Int      @default(0) @map("meal_count")
+  avgScore      Float    @default(0) @map("avg_score")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date(sort: Desc)])
+  @@map("daily_nutrition")
+}
