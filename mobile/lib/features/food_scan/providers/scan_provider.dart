@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
 
 import '../../../models/food_analysis_result.dart';
 import '../../../services/food_service.dart';
@@ -77,6 +78,13 @@ class ScanNotifier extends StateNotifier<ScanState> {
     } catch (e) {
       print('ANALYZE ERROR: $e');
       String errorMsg = 'Failed: $e';
+      
+      if (e is DioException) {
+        if (e.response != null && e.response?.data is Map) {
+          errorMsg = e.response?.data['message'] ?? errorMsg;
+        }
+      }
+      
       if (e.toString().contains('timeout') ||
           e.toString().contains('Timeout')) {
         errorMsg = 'Analysis timed out. Please try again with a clearer image.';

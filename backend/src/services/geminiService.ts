@@ -110,7 +110,7 @@ export async function analyzeFood(imagePath: string): Promise<GeminiAnalysisResp
       };
 
       // Call Gemini with the nutrition analysis prompt + image
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
       const result = await model.generateContent([NUTRITION_ANALYSIS_PROMPT, imagePart]);
       const response = await result.response;
       const text = response.text();

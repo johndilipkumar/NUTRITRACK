@@ -68,9 +68,9 @@ export const errorHandler = (
     return;
   }
 
-  // Unknown/unexpected errors — never expose details to client
+  // Unknown/unexpected errors — expose details to client temporarily for debugging
   res.status(500).json({
     success: false,
-    message: 'An unexpected error occurred. Please try again later.',
+    message: err.message || 'An unexpected error occurred.',
   });
 };
