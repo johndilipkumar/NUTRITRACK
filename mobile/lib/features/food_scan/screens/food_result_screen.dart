@@ -131,13 +131,17 @@ class _FoodResultScreenState extends ConsumerState<FoodResultScreen> {
                   _buildMacrosGrid(context, result),
                   const SizedBox(height: 24),
 
-                  // Food items breakdown
-                  if (result.items.length > 1) ...[
-                    Text('Food Breakdown', style: Theme.of(context).textTheme.titleLarge),
+                  // Food items breakdown — always show details for every item
+                  if (result.items.isNotEmpty) ...[
+                    Text(
+                      result.items.length > 1 ? 'Food Breakdown' : 'Nutritional Details',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 12),
                     ...result.items.map((item) => Card(
                           child: ExpansionTile(
                             tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                            initiallyExpanded: result.items.length == 1, // Auto-expand for single items
                             title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                             subtitle: Text(
                               '~${item.calories.toInt()} kcal • ${item.estimatedPortion ?? 'estimated'}',
@@ -164,6 +168,7 @@ class _FoodResultScreenState extends ConsumerState<FoodResultScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    _macroRow('Calories', '${item.calories.toStringAsFixed(0)} kcal', AppColors.accentOrange),
                                     _macroRow('Protein', '${item.proteinG.toStringAsFixed(1)} g', AppColors.protein),
                                     _macroRow('Carbs', '${item.carbsG.toStringAsFixed(1)} g', AppColors.carbs),
                                     _macroRow('Fat', '${item.fatG.toStringAsFixed(1)} g', AppColors.fat),
@@ -184,7 +189,7 @@ class _FoodResultScreenState extends ConsumerState<FoodResultScreen> {
                                             const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                item.healthierAlternative!,
+                                                'Try instead: ${item.healthierAlternative!}',
                                                 style: const TextStyle(fontSize: 12, color: AppColors.info),
                                               ),
                                             ),

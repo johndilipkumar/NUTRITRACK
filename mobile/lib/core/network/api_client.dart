@@ -13,9 +13,9 @@ class ApiClient {
     dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 60),
-        sendTimeout: const Duration(seconds: 60),
+        connectTimeout: const Duration(seconds: 60),  // Render free tier cold start can take 50s
+        receiveTimeout: const Duration(seconds: 90),
+        sendTimeout: const Duration(seconds: 90),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

@@ -57,9 +57,14 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
         hasMore: 1 < result.totalPages,
       );
     } catch (e) {
+      print('HISTORY ERROR: $e');
+      String errorMsg = 'Failed to load history. Pull down to refresh.';
+      if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        errorMsg = 'Server is waking up. Please wait and pull down to refresh.';
+      }
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to load history.',
+        error: errorMsg,
       );
     }
   }

@@ -31,9 +31,16 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       final data = await _service.getDashboard();
       state = state.copyWith(isLoading: false, data: data);
     } catch (e) {
+      print('DASHBOARD ERROR: $e');
+      String errorMsg = 'Failed to load dashboard. Pull down to refresh.';
+      if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        errorMsg = 'Server is waking up (free tier). Please wait 30 seconds and pull down to refresh.';
+      } else if (e.toString().contains('connect') || e.toString().contains('Connect')) {
+        errorMsg = 'Cannot connect to server. Check your internet and pull down to refresh.';
+      }
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to load dashboard. Pull down to refresh.',
+        error: errorMsg,
       );
     }
   }

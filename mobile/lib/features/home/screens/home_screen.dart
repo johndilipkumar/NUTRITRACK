@@ -75,6 +75,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
           ShimmerLoading(height: 60),
           SizedBox(height: 8),
           ShimmerLoading(height: 60),
+          SizedBox(height: 20),
+          Center(
+            child: Text(
+              '⏳ Waking up the server... this may take up to 30s on first load',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+            ),
+          ),
         ],
       ),
     );

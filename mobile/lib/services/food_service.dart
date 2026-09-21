@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
@@ -12,9 +13,16 @@ class FoodService {
 
   /// Upload an image and get AI nutritional analysis.
   Future<FoodAnalysisResult> analyzeFood(XFile imageFile) async {
-    final bytes = await imageFile.readAsBytes();
+    MultipartFile multipartFile;
+    if (kIsWeb) {
+      final bytes = await imageFile.readAsBytes();
+      multipartFile = MultipartFile.fromBytes(bytes, filename: imageFile.name);
+    } else {
+      multipartFile = await MultipartFile.fromFile(imageFile.path, filename: imageFile.name);
+    }
+
     final formData = FormData.fromMap({
-      'image': MultipartFile.fromBytes(bytes, filename: imageFile.name),
+      'image': multipartFile,
     });
 
     final response = await _dio.post(

@@ -75,7 +75,8 @@ class ScanNotifier extends StateNotifier<ScanState> {
 
       state = state.copyWith(status: ScanStatus.success, result: result);
     } catch (e) {
-      String errorMsg = 'Failed to analyze the image. Please try again.';
+      print('ANALYZE ERROR: $e');
+      String errorMsg = 'Failed: $e';
       if (e.toString().contains('timeout') ||
           e.toString().contains('Timeout')) {
         errorMsg = 'Analysis timed out. Please try again with a clearer image.';

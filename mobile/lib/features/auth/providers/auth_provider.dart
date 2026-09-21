@@ -151,9 +151,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _authService.login(email: email, password: password);
       return true;
     } catch (e) {
+      // Print to debug console and show exact error on UI so we know WHY it failed
+      print('LOGIN ERROR: $e');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        error: 'Invalid credentials or email not verified.',
+        error: e.toString().replaceAll('AuthException(', '').replaceAll(')', ''),
       );
       return false;
     }

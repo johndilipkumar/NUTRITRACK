@@ -6,17 +6,8 @@ import 'package:flutter/foundation.dart';
 class ApiConstants {
   ApiConstants._();
 
-  // Base URL — change for production deployment
-  static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000';
-    }
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      // Updated to your computer's local Wi-Fi IP so a physical phone can connect
-      return 'http://192.168.10.3:3000';
-    }
-    return 'http://localhost:3000';
-  }
+  // Base URL — connected to your live Render backend
+  static const String baseUrl = 'https://nutritrack-f6ab.onrender.com';
 
   // Supabase Constants
   static const String supabaseUrl = 'https://mbbvpssjvxzjijeejqrn.supabase.co';
