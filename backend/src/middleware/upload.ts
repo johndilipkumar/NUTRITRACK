@@ -3,6 +3,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import { env } from '../config/env';
+import { AppError } from './errorHandler';
 
 // Ensure uploads directory exists
 const uploadDir = path.resolve(env.UPLOAD_DIR);
@@ -31,6 +32,7 @@ const ALLOWED_TYPES = [
   'image/webp',
   'image/heic',
   'image/heif',
+  'application/octet-stream', // Android sometimes uses this
 ];
 
 const fileFilter = (
@@ -41,7 +43,7 @@ const fileFilter = (
   if (ALLOWED_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and HEIC images are allowed.'));
+    cb(new AppError(400, `Invalid file type: ${file.mimetype}. Only JPEG, PNG, WebP, and HEIC images are allowed.`));
   }
 };
 
