@@ -123,9 +123,16 @@ class SettingsScreen extends ConsumerWidget {
             // About
             _SectionHeader(title: 'About'),
             _SettingsTile(
-              icon: Icons.info_outline_rounded,
+              leadingWidget: ClipOval(
+                child: Image.asset(
+                  'assets/logo_emblem.png',
+                  width: 26,
+                  height: 26,
+                  fit: BoxFit.cover,
+                ),
+              ),
               title: 'NutriTrack v1.0.0',
-              subtitle: 'AI-Powered Nutrition Tracking',
+              subtitle: 'Food & Health Analytics',
               isDark: isDark,
             ),
 
@@ -297,7 +304,8 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _SettingsTile extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? leadingWidget;
   final String title;
   final String? subtitle;
   final bool isDark;
@@ -305,13 +313,14 @@ class _SettingsTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _SettingsTile({
-    required this.icon,
+    this.icon,
+    this.leadingWidget,
     required this.title,
     this.subtitle,
     required this.isDark,
     this.iconColor,
     this.onTap,
-  });
+  }) : assert(icon != null || leadingWidget != null, 'Either icon or leadingWidget must be provided');
 
   @override
   Widget build(BuildContext context) {
@@ -331,7 +340,7 @@ class _SettingsTile extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(icon, color: iconColor ?? Theme.of(context).iconTheme.color, size: 22),
+                  leadingWidget ?? Icon(icon!, color: iconColor ?? Theme.of(context).iconTheme.color, size: 22),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
