@@ -125,11 +125,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [AppColors.primary, AppColors.primaryDark],
+                        colors: isDark ? [Colors.white, const Color(0xFFCCCCCC)] : [Colors.black, const Color(0xFF333333)],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
+                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -138,8 +138,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                     child: Center(
                       child: Text(
                         userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.black : Colors.white,
                           fontWeight: FontWeight.w800,
                           fontSize: 18,
                         ),
@@ -196,6 +196,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                                     backgroundColor: isDark
                                         ? Colors.white.withValues(alpha: 0.08)
                                         : Colors.black.withValues(alpha: 0.06),
+                                    foregroundColor: isDark ? Colors.white : Colors.black,
                                     rotation: _rotationController.value * 2 * pi,
                                   ),
                                   child: child,
@@ -210,7 +211,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                                       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                                             fontWeight: FontWeight.w900,
                                             fontSize: 52,
-                                            color: AppColors.primary,
+                                            color: isDark ? Colors.white : Colors.black,
                                             fontFeatures: const [FontFeature.tabularFigures()],
                                           ),
                                     ),
@@ -235,7 +236,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                         label: 'Protein',
                         current: data.today.protein,
                         goal: data.goals.protein.toDouble(),
-                        color: AppColors.primary,
+                        color: AppColors.protein,
                         icon: Icons.fitness_center_rounded,
                       ),
                       const SizedBox(height: 10),
@@ -279,13 +280,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${data.today.mealCount} meals',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color: isDark ? Colors.white : Colors.black,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -333,7 +334,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  color: (mealIsDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Center(
@@ -371,7 +372,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                                     '~${meal.totalCalories.toInt()}',
                                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.w800,
-                                          color: AppColors.primary,
+                                          color: isDark ? Colors.white : Colors.black,
                                         ),
                                   ),
                                   Text(
@@ -414,7 +415,7 @@ class _PremiumEmptyState extends StatelessWidget {
             shape: BoxShape.circle,
             gradient: RadialGradient(
               colors: [
-                AppColors.primary.withValues(alpha: 0.15),
+                (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
                 Colors.transparent,
               ],
             ),
@@ -461,11 +462,13 @@ class _PremiumEmptyState extends StatelessWidget {
 class _PremiumCalorieRingPainter extends CustomPainter {
   final double progress;
   final Color backgroundColor;
+  final Color foregroundColor;
   final double rotation;
 
   _PremiumCalorieRingPainter({
     required this.progress,
     required this.backgroundColor,
+    required this.foregroundColor,
     this.rotation = 0.0,
   });
 
@@ -492,7 +495,7 @@ class _PremiumCalorieRingPainter extends CustomPainter {
     final tickPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
-      ..color = AppColors.primary.withValues(alpha: 0.3);
+      ..color = backgroundColor;
     for (int i = 0; i < 60; i++) {
       final angle = (i * 6) * pi / 180 - pi / 2;
       final isLong = i % 5 == 0;
@@ -523,7 +526,7 @@ class _PremiumCalorieRingPainter extends CustomPainter {
 
     // Progress arcs (don't rotate)
     final clampedProgress = progress.clamp(0.0, 1.0);
-    final color = clampedProgress > 0.9 ? AppColors.warning : AppColors.primary;
+    final color = clampedProgress > 0.9 ? AppColors.warning : foregroundColor;
 
     // Neon outer glow
     final outerGlowPaint = Paint()

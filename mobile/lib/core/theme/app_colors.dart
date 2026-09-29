@@ -6,10 +6,10 @@ class AppColors {
   AppColors._();
 
   // ─── Primary Brand Colors ─────────────────────────────────────────────
-  static const Color primary = Color(0xFF111111);        // Near-black
-  static const Color primaryDark = Color(0xFF000000);
-  static const Color primaryLight = Color(0xFF444444);
-  static const Color primarySurface = Color(0xFFF2F2F2);
+  static const Color primary = Color(0xFF4B5563);        // Neutral gray — visible on both themes
+  static const Color primaryDark = Color(0xFF374151);
+  static const Color primaryLight = Color(0xFF9CA3AF);
+  static const Color primarySurface = Color(0xFFF3F4F6);
 
   // ─── Accent Colors ────────────────────────────────────────────────────
   static const Color accent = Color(0xFF111111);
