@@ -79,7 +79,7 @@ Remember: Output ONLY the JSON object. No markdown formatting, no \`\`\`json blo
  * @returns Validated nutritional analysis result
  * @throws Error if Gemini fails or returns invalid data after retries
  */
-export async function analyzeFood(imagePath: string): Promise<GeminiAnalysisResponse> {
+export async function analyzeFood(imagePath: string): Promise<{ data: GeminiAnalysisResponse; usage: { inputTokens: number; outputTokens: number } }> {
   const MAX_RETRIES = 2;
   let lastError: Error | null = null;
 
@@ -125,7 +125,12 @@ export async function analyzeFood(imagePath: string): Promise<GeminiAnalysisResp
         validated.disclaimer = 'No food or drink was detected in this image.';
       }
 
-      return validated;
+      // Extract token usage
+      const usageMetadata = response.usageMetadata;
+      const inputTokens = usageMetadata?.promptTokenCount || 1500;
+      const outputTokens = usageMetadata?.candidatesTokenCount || 500;
+
+      return { data: validated, usage: { inputTokens, outputTokens } };
     } catch (error) {
       lastError = error as Error;
       console.error(`Gemini analysis attempt ${attempt + 1} failed:`, (error as Error).message);

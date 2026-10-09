@@ -10,6 +10,7 @@ class User {
   final String? activityLevel;
   final int dailyCalorieGoal;
   final String? dietaryPreference;
+  final String? role;
   final String? createdAt;
 
   User({
@@ -23,6 +24,7 @@ class User {
     this.activityLevel,
     this.dailyCalorieGoal = 2000,
     this.dietaryPreference,
+    this.role,
     this.createdAt,
   });
 
@@ -38,6 +40,7 @@ class User {
       activityLevel: json['activityLevel'] as String?,
       dailyCalorieGoal: json['dailyCalorieGoal'] as int? ?? 2000,
       dietaryPreference: json['dietaryPreference'] as String?,
+      role: json['role'] as String?,
       createdAt: json['createdAt'] as String?,
     );
   }
@@ -54,6 +57,7 @@ class User {
       'activityLevel': activityLevel,
       'dailyCalorieGoal': dailyCalorieGoal,
       'dietaryPreference': dietaryPreference,
+      'role': role,
     };
   }
 
@@ -78,6 +82,7 @@ class User {
       activityLevel: activityLevel ?? this.activityLevel,
       dailyCalorieGoal: dailyCalorieGoal ?? this.dailyCalorieGoal,
       dietaryPreference: dietaryPreference ?? this.dietaryPreference,
+      role: role,
       createdAt: createdAt,
     );
   }

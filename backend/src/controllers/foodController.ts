@@ -5,6 +5,14 @@ import { AppError } from '../middleware/errorHandler';
 import { analyzeFood } from '../services/geminiService';
 import { getImageUrl, getImagePath, deleteImage } from '../services/storageService';
 import { saveFoodSchema, manualFoodSchema } from '../validators/foodValidators';
+import {
+  checkGlobalSafeguards,
+  checkQuota,
+  reserveCredits,
+  reconcileReservation,
+  releaseReservation,
+  calculateCredits,
+} from '../services/subscriptionService';
 
 /**
  * POST /api/food/analyze
@@ -17,40 +25,78 @@ export const analyzeFoodImage = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = req.userId!;
     if (!req.file) {
       throw new AppError(400, 'Please upload a food image.');
     }
+
+    // 1. Check global safeguards
+    const globalCheck = await checkGlobalSafeguards();
+    if (!globalCheck.allowed) {
+      throw new AppError(503, globalCheck.reason || 'AI service temporarily disabled.');
+    }
+
+    // 2. Check user quota
+    const quota = await checkQuota(userId);
+    if (!quota.allowed) {
+      throw new AppError(402, quota.reason || 'Insufficient quota.');
+    }
+
+    // 3. Reserve credits (estimate: 1500 input + 500 output)
+    const estimatedCredits = calculateCredits(1500, 500);
+    const { reservationId } = await reserveCredits(userId, quota.subscription.id, estimatedCredits);
 
     // Get the absolute path to the uploaded file for Gemini
     const imagePath = getImagePath(req.file.filename);
     const imageUrl = getImageUrl(req.file.filename);
 
-    // Send image to Gemini for analysis
-    const analysis = await analyzeFood(imagePath);
+    const startTime = Date.now();
+    try {
+      // 4. Send image to Gemini for analysis
+      const { data: analysis, usage } = await analyzeFood(imagePath);
+      const durationMs = Date.now() - startTime;
 
-    // Check if food was detected
-    if (analysis.items.length === 0) {
+      // 5. Reconcile reservation
+      const actualCredits = calculateCredits(usage.inputTokens, usage.outputTokens);
+      await reconcileReservation(
+        reservationId,
+        actualCredits,
+        quota.subscription.id,
+        usage.inputTokens,
+        usage.outputTokens,
+        'completed',
+        undefined,
+        durationMs
+      );
+
+      // Check if food was detected
+      if (analysis.items.length === 0) {
+        res.json({
+          success: true,
+          message: 'No food or drink was detected in this image.',
+          data: {
+            imageUrl,
+            analysis,
+            foodDetected: false,
+          },
+        });
+        return;
+      }
+
       res.json({
         success: true,
-        message: 'No food or drink was detected in this image.',
+        message: 'Food analyzed successfully.',
         data: {
           imageUrl,
           analysis,
-          foodDetected: false,
+          foodDetected: true,
         },
       });
-      return;
+    } catch (analysisError) {
+      // Release reservation on failure
+      await releaseReservation(reservationId, quota.subscription.id);
+      throw analysisError;
     }
-
-    res.json({
-      success: true,
-      message: 'Food analyzed successfully.',
-      data: {
-        imageUrl,
-        analysis,
-        foodDetected: true,
-      },
-    });
   } catch (error) {
     next(error);
   }

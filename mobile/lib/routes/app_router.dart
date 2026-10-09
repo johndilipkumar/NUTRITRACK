@@ -18,6 +18,9 @@ import '../features/food_scan/screens/manual_entry_screen.dart';
 import '../features/food_details/screens/food_detail_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/subscription/screens/pricing_screen.dart';
+import '../features/subscription/screens/usage_screen.dart';
+import '../features/admin/screens/admin_dashboard_screen.dart';
 import '../core/theme/app_colors.dart';
 
 /// GoRouter configuration with auth guard and bottom navigation shell.
@@ -78,6 +81,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             FoodDetailScreen(foodId: state.pathParameters['id']!),
       ),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(path: '/pricing', builder: (_, _) => const PricingScreen()),
+      GoRoute(path: '/usage', builder: (_, _) => const UsageScreen()),
+      GoRoute(path: '/admin', builder: (_, _) => const AdminDashboardScreen()),
     ],
   );
 

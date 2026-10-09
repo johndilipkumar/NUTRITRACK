@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// API endpoint constants.
 /// The base URL points to the backend server.
@@ -35,4 +34,24 @@ class ApiConstants {
   // User endpoints
   static const String userProfile = '/api/user/profile';
   static const String deleteAccount = '/api/user/account';
+
+  // Subscription endpoints
+  static const String plans = '/api/subscription/plans';
+  static const String subscriptionStatus = '/api/subscription/status';
+  static const String subscriptionHistory = '/api/subscription/history';
+  static const String usageHistory = '/api/subscription/usage-history';
+  static const String cancelSubscription = '/api/subscription/cancel';
+  static const String checkout = '/api/subscription/checkout';
+  static const String verifyPayment = '/api/subscription/verify-payment';
+
+  // Admin endpoints
+  static const String adminPlans = '/api/admin/plans';
+  static const String adminUsers = '/api/admin/users';
+  static const String adminCredits = '/api/admin/credits';
+  static const String adminAssignPlan = '/api/admin/assign-plan';
+  static const String adminToggleAiAccess = '/api/admin/toggle-ai-access';
+  static const String adminAnalyticsOverview = '/api/admin/analytics/overview';
+  static const String adminAnalyticsUsage = '/api/admin/analytics/usage';
+  static const String adminAuditLogs = '/api/admin/audit-logs';
+  static const String adminConfig = '/api/admin/config';
 }

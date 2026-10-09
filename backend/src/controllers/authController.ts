@@ -12,6 +12,7 @@ import {
   resetPasswordRequestSchema,
   resetPasswordSchema,
 } from '../validators/authValidators';
+import { assignFreePlanToUser } from '../services/subscriptionService';
 
 /**
  * Generate a JWT token for the given user.
@@ -62,6 +63,9 @@ export const register = async (
         createdAt: true,
       },
     });
+
+    // Assign free plan to new user
+    await assignFreePlanToUser(user.id);
 
     // Generate JWT
     const token = generateToken(user.id, user.email);

@@ -88,6 +88,29 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () => context.push('/profile'),
             ),
 
+            // Subscription section
+            _SectionHeader(title: 'Subscription'),
+            _SettingsTile(
+              icon: Icons.workspace_premium_rounded,
+              title: 'Plan & Usage',
+              subtitle: 'Manage your AI access and limits',
+              isDark: isDark,
+              onTap: () => context.push('/usage'),
+            ),
+            
+            // Admin Section (only if role is admin)
+            if (authState.user?.role == 'admin') ...[
+              _SectionHeader(title: 'Admin Control Panel'),
+              _SettingsTile(
+                icon: Icons.admin_panel_settings_rounded,
+                title: 'System Dashboard',
+                subtitle: 'Manage users, plans, and system safeguards',
+                isDark: isDark,
+                iconColor: AppColors.primary,
+                onTap: () => context.push('/admin'),
+              ),
+            ],
+
             // Appearance
             _SectionHeader(title: 'Appearance'),
             _SettingsTile(

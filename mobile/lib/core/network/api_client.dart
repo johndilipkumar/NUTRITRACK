@@ -45,6 +45,26 @@ class ApiClient {
               ),
             );
           }
+          if (error.response?.statusCode == 402) {
+            return handler.reject(
+              DioException(
+                requestOptions: error.requestOptions,
+                message: 'Quota exceeded. Please upgrade your plan to continue.',
+                type: error.type,
+                response: error.response,
+              ),
+            );
+          }
+          if (error.response?.statusCode == 503) {
+            return handler.reject(
+              DioException(
+                requestOptions: error.requestOptions,
+                message: 'AI Service is temporarily unavailable. Please try again later.',
+                type: error.type,
+                response: error.response,
+              ),
+            );
+          }
           if (error.type == DioExceptionType.connectionError) {
             return handler.reject(
               DioException(

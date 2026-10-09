@@ -24,13 +24,22 @@ model User {
   activityLevel     String?   @map("activity_level") // sedentary, light, moderate, active, very_active
   dailyCalorieGoal  Int       @default(2000) @map("daily_calorie_goal")
   dietaryPreference String?   @map("dietary_preference") // none, vegetarian, vegan, keto, paleo, etc.
+  role              String    @default("user") // user, admin
+  aiAccessEnabled   Boolean   @default(true) @map("ai_access_enabled")
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  foodEntries    FoodEntry[]
-  dailyNutrition DailyNutrition[]
+  foodEntries       FoodEntry[]
+  dailyNutrition    DailyNutrition[]
+  subscriptions     UserSubscription[]
+  usageEvents       UsageEvent[]
+  creditLedger      CreditLedger[]     @relation("UserCredits")
+  usageReservations UsageReservation[]
+  payments          Payment[]
+  adminAuditLogs    AdminAuditLog[]    @relation("AdminActions")
+  targetAuditLogs   AdminAuditLog[]    @relation("TargetActions")
 
   @@map("users")
 }
@@ -111,4 +120,196 @@ model DailyNutrition {
   @@unique([userId, date])
   @@index([userId, date(sort: Desc)])
   @@map("daily_nutrition")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PLAN MANAGEMENT, SUBSCRIPTIONS & TOKEN CONTROL
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Subscription Plans ─────────────────────────────────────────────────
+model Plan {
+  id                String   @id @default(uuid())
+  name              String   // e.g. "Free", "Pro", "Premium"
+  slug              String   @unique // e.g. "free", "pro", "premium"
+  description       String?
+  priceAmount       Int      @default(0) @map("price_amount") // In smallest currency unit (paise for INR)
+  currency          String   @default("INR")
+  billingInterval   String   @default("monthly") @map("billing_interval") // monthly, yearly
+  monthlyCreditLimit Int     @default(100000) @map("monthly_credit_limit")
+  dailyCreditLimit  Int?     @map("daily_credit_limit")
+  dailyRequestLimit Int      @default(20) @map("daily_request_limit")
+  maxInputTokens    Int      @default(2048) @map("max_input_tokens")
+  maxOutputTokens   Int      @default(500) @map("max_output_tokens")
+  allowedModels     Json     @default("[]") @map("allowed_models") // JSON array of model identifiers
+  features          Json     @default("{}") // JSON object of feature flags
+  isDefault         Boolean  @default(false) @map("is_default") // Only one plan should be default (Free)
+  isActive          Boolean  @default(true) @map("is_active")
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  subscriptions UserSubscription[]
+
+  @@map("plans")
+}
+
+// ─── User Subscriptions ─────────────────────────────────────────────────
+model UserSubscription {
+  id                     String    @id @default(uuid())
+  userId                 String    @map("user_id")
+  planId                 String    @map("plan_id")
+  status                 String    @default("active") // active, cancelled, past_due, expired, trialing
+  billingPeriodStart     DateTime  @map("billing_period_start")
+  billingPeriodEnd       DateTime  @map("billing_period_end")
+  cancelAtPeriodEnd      Boolean   @default(false) @map("cancel_at_period_end")
+  cancelledAt            DateTime? @map("cancelled_at")
+  providerCustomerId     String?   @map("provider_customer_id")
+  providerSubscriptionId String?   @map("provider_subscription_id")
+  // Monthly usage counters (reset at billingPeriodStart)
+  monthlyCreditsUsed     Int       @default(0) @map("monthly_credits_used")
+  // Daily usage counters (reset at midnight UTC)
+  dailyCreditsUsed       Int       @default(0) @map("daily_credits_used")
+  dailyRequestsUsed      Int       @default(0) @map("daily_requests_used")
+  dailyResetDate         DateTime  @default(now()) @map("daily_reset_date") @db.Date
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([userId, status])
+  @@index([billingPeriodEnd])
+  @@map("user_subscriptions")
+}
+
+// ─── AI Usage Events (append-only log) ──────────────────────────────────
+model UsageEvent {
+  id                      String   @id @default(uuid())
+  userId                  String   @map("user_id")
+  requestId               String   @unique @map("request_id") // UUID for request correlation
+  provider                String   @default("google") // google, openai, etc.
+  model                   String   @default("gemini-2.0-flash")
+  inputTokens             Int      @default(0) @map("input_tokens")
+  outputTokens            Int      @default(0) @map("output_tokens")
+  applicationCreditsCharged Int    @default(0) @map("application_credits_charged")
+  estimatedCost           Float    @default(0) @map("estimated_cost") // In USD cents
+  currency                String   @default("USD")
+  status                  String   @default("completed") // pending, completed, failed, cancelled
+  errorMessage            String?  @map("error_message")
+  durationMs              Int?     @map("duration_ms")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("usage_events")
+}
+
+// ─── Credit Ledger (append-only, auditable) ─────────────────────────────
+model CreditLedger {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  creditType      String    @map("credit_type") // plan_allowance, bonus, consumption, reversal, expiration, reservation
+  transactionType String    @map("transaction_type") // credit (add), debit (subtract)
+  amount          Int       // Always positive; direction determined by transactionType
+  remainingAmount Int?      @map("remaining_amount") // For bonus grants: tracks unconsumed portion
+  expiresAt       DateTime? @map("expires_at")
+  sourceReference String?   @map("source_reference") // Links to requestId, paymentId, etc.
+  reason          String?
+  createdBy       String?   @map("created_by") // Admin user ID, or 'system'
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user User @relation("UserCredits", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, creditType])
+  @@index([expiresAt])
+  @@map("credit_ledger")
+}
+
+// ─── Usage Reservations (pre-deducted credits for in-flight requests) ──
+model UsageReservation {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  requestId       String    @unique @map("request_id")
+  reservedCredits Int       @map("reserved_credits")
+  finalCredits    Int?      @map("final_credits") // Set after reconciliation
+  status          String    @default("reserved") // reserved, reconciled, released, expired
+  expiresAt       DateTime  @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("usage_reservations")
+}
+
+// ─── Payments ───────────────────────────────────────────────────────────
+model Payment {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  provider          String   @default("razorpay") // razorpay, stripe
+  providerPaymentId String?  @map("provider_payment_id")
+  providerOrderId   String?  @map("provider_order_id")
+  providerEventId   String?  @map("provider_event_id")
+  amount            Int      // In smallest currency unit (paise)
+  currency          String   @default("INR")
+  status            String   @default("pending") // pending, completed, failed, refunded
+  planId            String?  @map("plan_id") // Which plan this payment is for
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([providerPaymentId])
+  @@index([providerOrderId])
+  @@map("payments")
+}
+
+// ─── Admin Audit Logs (append-only) ─────────────────────────────────────
+model AdminAuditLog {
+  id           String   @id @default(uuid())
+  adminUserId  String   @map("admin_user_id")
+  action       String   // plan_created, plan_updated, credit_granted, credit_revoked, user_suspended, plan_assigned, etc.
+  targetUserId String?  @map("target_user_id")
+  reason       String?
+  details      Json?    // Before/after values, amounts, etc.
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  adminUser  User  @relation("AdminActions", fields: [adminUserId], references: [id], onDelete: Cascade)
+  targetUser User? @relation("TargetActions", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminUserId, createdAt(sort: Desc)])
+  @@index([targetUserId])
+  @@index([action])
+  @@map("admin_audit_logs")
+}
+
+// ─── Processed Webhook Events (idempotency) ─────────────────────────────
+model ProcessedWebhookEvent {
+  id               String   @id @default(uuid())
+  provider         String   // razorpay, stripe
+  providerEventId  String   @map("provider_event_id")
+  eventType        String   @map("event_type")
+  processedAt      DateTime @default(now()) @map("processed_at")
+  processingStatus String   @default("success") @map("processing_status") // success, failed
+
+  @@unique([provider, providerEventId])
+  @@map("processed_webhook_events")
+}
+
+// ─── Global Configuration (spending safeguards) ─────────────────────────
+model GlobalConfig {
+  id               String   @id @default(uuid())
+  key              String   @unique // e.g. "ai_enabled", "daily_spend_limit_usd", "monthly_spend_limit_usd"
+  value            String   // JSON string or simple value
+  description      String?
+  updatedBy        String?  @map("updated_by") // Admin user ID
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("global_config")
 }

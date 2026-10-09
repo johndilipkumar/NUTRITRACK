@@ -10,6 +10,8 @@ import authRoutes from './routes/auth';
 import foodRoutes from './routes/food';
 import dashboardRoutes from './routes/dashboard';
 import userRoutes from './routes/user';
+import adminRoutes from './routes/admin';
+import subscriptionRoutes from './routes/subscription';
 
 const app = express();
 
@@ -51,6 +53,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/food', foodRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────────────────
 
