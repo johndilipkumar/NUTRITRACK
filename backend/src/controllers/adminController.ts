@@ -86,7 +86,7 @@ export const updatePlan = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const input = updatePlanSchema.parse(req.body);
 
     const existingPlan = await prisma.plan.findUnique({ where: { id } });
@@ -212,7 +212,7 @@ export const getUserDetails = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -265,10 +265,10 @@ export const getUserDetails = async (
         user,
         usageStats: {
           totalRequests: usageStats._count,
-          totalCreditsUsed: usageStats._sum.applicationCreditsCharged || 0,
-          totalInputTokens: usageStats._sum.inputTokens || 0,
-          totalOutputTokens: usageStats._sum.outputTokens || 0,
-          totalEstimatedCost: usageStats._sum.estimatedCost || 0,
+          totalCreditsUsed: usageStats._sum?.applicationCreditsCharged || 0,
+          totalInputTokens: usageStats._sum?.inputTokens || 0,
+          totalOutputTokens: usageStats._sum?.outputTokens || 0,
+          totalEstimatedCost: usageStats._sum?.estimatedCost || 0,
         },
         creditHistory,
         paymentHistory,
