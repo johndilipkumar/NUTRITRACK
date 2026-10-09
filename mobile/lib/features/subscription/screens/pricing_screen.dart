@@ -221,7 +221,7 @@ class _PricingScreenState extends State<PricingScreen> {
       ),
       child: Padding(
         // Inner padding for the gradient border effect if we wanted one, but here we just pad the content
-        padding: const EdgeInsets.all(isPremium ? 2 : 0), 
+        padding: EdgeInsets.all(isPremium ? 2 : 0), 
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
