@@ -26,6 +26,7 @@ model User {
   dietaryPreference String?   @map("dietary_preference") // none, vegetarian, vegan, keto, paleo, etc.
   role              String    @default("user") // user, admin
   aiAccessEnabled   Boolean   @default(true) @map("ai_access_enabled")
+  unlimitedGenerations Boolean @default(false) @map("unlimited_generations")
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry")
   createdAt         DateTime  @default(now()) @map("created_at")
@@ -138,6 +139,7 @@ model Plan {
   monthlyCreditLimit Int     @default(100000) @map("monthly_credit_limit")
   dailyCreditLimit  Int?     @map("daily_credit_limit")
   dailyRequestLimit Int      @default(20) @map("daily_request_limit")
+  generationLimit   Int      @default(2) @map("generation_limit") // Max successful generations per billing period
   maxInputTokens    Int      @default(2048) @map("max_input_tokens")
   maxOutputTokens   Int      @default(500) @map("max_output_tokens")
   allowedModels     Json     @default("[]") @map("allowed_models") // JSON array of model identifiers
@@ -165,6 +167,7 @@ model UserSubscription {
   cancelledAt            DateTime? @map("cancelled_at")
   providerCustomerId     String?   @map("provider_customer_id")
   providerSubscriptionId String?   @map("provider_subscription_id")
+  isMockSubscription     Boolean   @default(false) @map("is_mock_subscription")
   // Monthly usage counters (reset at billingPeriodStart)
   monthlyCreditsUsed     Int       @default(0) @map("monthly_credits_used")
   // Daily usage counters (reset at midnight UTC)

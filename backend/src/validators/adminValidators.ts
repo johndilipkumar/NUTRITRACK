@@ -12,6 +12,7 @@ export const createPlanSchema = z.object({
   monthlyCreditLimit: z.number().int().min(1, 'Monthly credit limit must be positive'),
   dailyCreditLimit: z.number().int().min(1).optional().nullable(),
   dailyRequestLimit: z.number().int().min(1, 'Daily request limit must be positive'),
+  generationLimit: z.number().int().min(1, 'Generation limit must be positive').default(2),
   maxInputTokens: z.number().int().min(1).default(2048),
   maxOutputTokens: z.number().int().min(1, 'Max output tokens must be positive'),
   allowedModels: z.array(z.string()).default([]),
@@ -50,6 +51,12 @@ export const toggleAiAccessSchema = z.object({
   userId: z.string().uuid('Invalid user ID'),
   enabled: z.boolean(),
   reason: z.string().min(1, 'Reason is required').max(500),
+});
+
+export const toggleUnlimitedGenerationsSchema = z.object({
+  userId: z.string().uuid('Invalid user ID'),
+  enabled: z.boolean(),
+  reason: z.string().max(500).optional(),
 });
 
 // ─── Global config update ───────────────────────────────────────────────

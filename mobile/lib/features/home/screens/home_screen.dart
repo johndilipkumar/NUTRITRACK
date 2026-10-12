@@ -10,7 +10,7 @@ import '../../../widgets/macro_progress_bar.dart';
 import '../../../widgets/shimmer_loading.dart';
 import '../../../widgets/error_widget.dart';
 import '../providers/dashboard_provider.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../../../services/subscription_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +21,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProviderStateMixin {
   late AnimationController _rotationController;
+  Map<String, dynamic>? _generationStatus;
 
   @override
   void initState() {
@@ -31,7 +32,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
     )..repeat();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dashboardProvider.notifier).fetchDashboard();
+      _fetchGenerationStatus();
     });
+  }
+
+  Future<void> _fetchGenerationStatus() async {
+    try {
+      final status = await SubscriptionService().getGenerationStatus();
+      if (mounted) {
+        setState(() => _generationStatus = status);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -46,7 +57,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+        onRefresh: () async {
+          await Future.wait([
+            ref.read(dashboardProvider.notifier).refresh(),
+            _fetchGenerationStatus(),
+          ]);
+        },
         child: dashboard.data == null
             ? (dashboard.error != null
                 ? AppErrorWidget(
@@ -151,6 +167,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
             ),
           ),
         ),
+
+        // Generation allowance pill
+        if (_generationStatus != null && _generationStatus!['hasSubscription'] == true)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: _buildGenerationPill(context, isDark),
+            ),
+          ),
 
         // Calorie ring card — premium glass
         SliverToBoxAdapter(
@@ -395,6 +420,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
 
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
+    );
+  }
+
+  Widget _buildGenerationPill(BuildContext context, bool isDark) {
+    final planName = _generationStatus!['planName'] ?? 'Free';
+    final isUnlimited = _generationStatus!['isUnlimited'] == true || (_generationStatus!['generationLimit'] ?? 0) == -1;
+    final remaining = _generationStatus!['generationsRemaining'] ?? 0;
+    final isExhausted = !isUnlimited && remaining <= 0;
+
+    return InkWell(
+      onTap: () => context.push(isExhausted ? '/pricing' : '/usage'),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isUnlimited
+              ? Colors.purple.withValues(alpha: 0.12)
+              : (isExhausted
+                  ? AppColors.error.withValues(alpha: 0.12)
+                  : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04))),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isUnlimited
+                ? Colors.purple.withValues(alpha: 0.4)
+                : (isExhausted
+                    ? AppColors.error.withValues(alpha: 0.35)
+                    : (isDark ? Colors.white12 : Colors.black12)),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isUnlimited
+                  ? Icons.all_inclusive_rounded
+                  : (isExhausted ? Icons.warning_amber_rounded : Icons.bolt_rounded),
+              size: 16,
+              color: isUnlimited
+                  ? Colors.purple
+                  : (isExhausted ? AppColors.error : Colors.amber),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isUnlimited
+                    ? '$planName Plan • Unlimited generations (∞)'
+                    : (isExhausted
+                        ? 'Limit reached ($planName Plan) • Tap to upgrade'
+                        : '$planName Plan • $remaining generations left'),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isUnlimited
+                      ? Colors.purple
+                      : (isExhausted ? AppColors.error : (isDark ? Colors.white70 : Colors.black87)),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: isUnlimited
+                  ? Colors.purple
+                  : (isExhausted ? AppColors.error : Colors.grey),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -21,13 +21,63 @@ class AnalysisLoadingScreen extends ConsumerWidget {
         context.go('/scan/result');
       } else if (next.status == ScanStatus.error) {
         context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error ?? 'Analysis failed'),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 5),
-          ),
-        );
+        final error = next.error ?? 'Analysis failed';
+        if (error.toLowerCase().contains('generation limit')) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 24),
+                  SizedBox(width: 8),
+                  Text('Limit Reached', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "You've reached your generation limit for this plan.",
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    "Upgrade your plan to access a higher generation allowance.",
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/pricing');
+                  },
+                  child: const Text('Upgrade Plan'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
       }
     });
 

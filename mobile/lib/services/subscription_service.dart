@@ -55,4 +55,9 @@ class SubscriptionService {
     );
     return response.data['data'];
   }
+
+  Future<Map<String, dynamic>> getGenerationStatus() async {
+    final response = await _dio.get(ApiConstants.generationStatus);
+    return response.data['data'];
+  }
 }

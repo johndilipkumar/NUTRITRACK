@@ -8,6 +8,7 @@ import {
   creditAdjustmentSchema,
   assignPlanSchema,
   toggleAiAccessSchema,
+  toggleUnlimitedGenerationsSchema,
   updateGlobalConfigSchema,
 } from '../validators/adminValidators';
 
@@ -161,11 +162,12 @@ export const getUsers = async (
           name: true,
           role: true,
           aiAccessEnabled: true,
+          unlimitedGenerations: true,
           createdAt: true,
           updatedAt: true,
           subscriptions: {
             where: { status: { in: ['active', 'trialing', 'past_due'] } },
-            include: { plan: { select: { id: true, name: true, slug: true } } },
+            include: { plan: { select: { id: true, name: true, slug: true, generationLimit: true, priceAmount: true, billingInterval: true } } },
             orderBy: { createdAt: 'desc' },
             take: 1,
           },
@@ -181,9 +183,26 @@ export const getUsers = async (
     const enrichedUsers = await Promise.all(
       users.map(async (user) => {
         const subscription = user.subscriptions[0] || null;
+        let generationsUsed = 0;
+        if (subscription) {
+          generationsUsed = await prisma.usageEvent.count({
+            where: {
+              userId: user.id,
+              status: 'completed',
+              createdAt: {
+                gte: subscription.billingPeriodStart,
+                lte: subscription.billingPeriodEnd,
+              },
+            },
+          });
+        }
         return {
           ...user,
-          currentPlan: subscription?.plan || null,
+          currentPlan: subscription?.plan ? {
+            ...subscription.plan,
+            generationsUsed,
+            generationLimit: subscription.plan.generationLimit,
+          } : null,
           subscriptionStatus: subscription?.status || 'none',
           subscriptions: undefined, // Don't send raw subscriptions array
         };
@@ -222,6 +241,7 @@ export const getUserDetails = async (
         name: true,
         role: true,
         aiAccessEnabled: true,
+        unlimitedGenerations: true,
         createdAt: true,
         updatedAt: true,
         subscriptions: {
@@ -235,8 +255,12 @@ export const getUserDetails = async (
       throw new AppError(404, 'User not found.');
     }
 
+    const activeSubscription = user.subscriptions.find((s) =>
+      ['active', 'trialing', 'past_due'].includes(s.status)
+    );
+
     // Get usage stats
-    const [usageStats, creditHistory, paymentHistory] = await Promise.all([
+    const [usageStats, creditHistory, paymentHistory, periodGenerationsCount] = await Promise.all([
       prisma.usageEvent.aggregate({
         where: { userId: id },
         _count: true,
@@ -257,6 +281,18 @@ export const getUserDetails = async (
         orderBy: { createdAt: 'desc' },
         take: 20,
       }),
+      activeSubscription
+        ? prisma.usageEvent.count({
+            where: {
+              userId: id,
+              status: 'completed',
+              createdAt: {
+                gte: activeSubscription.billingPeriodStart,
+                lte: activeSubscription.billingPeriodEnd,
+              },
+            },
+          })
+        : Promise.resolve(0),
     ]);
 
     res.json({
@@ -269,6 +305,8 @@ export const getUserDetails = async (
           totalInputTokens: usageStats._sum?.inputTokens || 0,
           totalOutputTokens: usageStats._sum?.outputTokens || 0,
           totalEstimatedCost: usageStats._sum?.estimatedCost || 0,
+          generationsUsedInPeriod: periodGenerationsCount,
+          generationLimit: activeSubscription?.plan.generationLimit ?? 0,
         },
         creditHistory,
         paymentHistory,
@@ -491,6 +529,48 @@ export const toggleAiAccess = async (
     res.json({
       success: true,
       message: `AI access ${input.enabled ? 'enabled' : 'disabled'} for user.`,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/admin/toggle-unlimited-generations
+ * Enable or disable unlimited generations for a specific user.
+ */
+export const toggleUnlimitedGenerations = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const input = toggleUnlimitedGenerationsSchema.parse(req.body);
+    const adminUserId = req.userId!;
+
+    const targetUser = await prisma.user.findUnique({ where: { id: input.userId } });
+    if (!targetUser) throw new AppError(404, 'User not found.');
+
+    const user = await prisma.user.update({
+      where: { id: input.userId },
+      data: { unlimitedGenerations: input.enabled },
+      select: { id: true, email: true, name: true, unlimitedGenerations: true },
+    });
+
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId,
+        action: input.enabled ? 'user_unlimited_generations_granted' : 'user_unlimited_generations_revoked',
+        targetUserId: input.userId,
+        reason: input.reason || `Unlimited generations set to ${input.enabled}`,
+        details: { before: targetUser.unlimitedGenerations, after: input.enabled },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Unlimited generations ${input.enabled ? 'enabled' : 'disabled'} for ${user.email}.`,
       data: user,
     });
   } catch (error) {

@@ -27,6 +27,7 @@ export const getAvailablePlans = async (
         monthlyCreditLimit: true,
         dailyCreditLimit: true,
         dailyRequestLimit: true,
+        generationLimit: true,
         maxOutputTokens: true,
         allowedModels: true,
         features: true,

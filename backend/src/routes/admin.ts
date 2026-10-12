@@ -10,6 +10,7 @@ import {
   adjustCredits,
   assignPlan,
   toggleAiAccess,
+  toggleUnlimitedGenerations,
   getAdminOverview,
   getUsageAnalytics,
   getAuditLogs,
@@ -40,6 +41,7 @@ router.post('/assign-plan', assignPlan);
 
 // AI access control
 router.post('/toggle-ai-access', toggleAiAccess);
+router.post('/toggle-unlimited-generations', toggleUnlimitedGenerations);
 
 // Analytics
 router.get('/analytics/overview', getAdminOverview);

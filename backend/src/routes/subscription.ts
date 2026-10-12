@@ -11,6 +11,10 @@ import {
   createCheckout,
   verifyPayment,
 } from '../controllers/paymentController';
+import {
+  mockUpgrade,
+  getGenerationStatus,
+} from '../controllers/mockUpgradeController';
 
 const router = Router();
 
@@ -24,6 +28,7 @@ router.use(authenticate);
 router.get('/status', getSubscriptionStatus);
 router.get('/history', getSubscriptionHistory);
 router.get('/usage-history', getUsageHistory);
+router.get('/generation-status', getGenerationStatus);
 
 // Subscription management
 router.post('/cancel', cancelSubscription);
@@ -32,4 +37,8 @@ router.post('/cancel', cancelSubscription);
 router.post('/checkout', createCheckout);
 router.post('/verify-payment', verifyPayment);
 
+// Mock upgrade (development/demo only)
+router.post('/mock-upgrade', mockUpgrade);
+
 export default router;
+

@@ -59,6 +59,7 @@ export async function getOrCreateDefaultPlan() {
         monthlyCreditLimit: 100000,
         dailyCreditLimit: 5000,
         dailyRequestLimit: 20,
+        generationLimit: 2,
         maxInputTokens: 2048,
         maxOutputTokens: 500,
         allowedModels: ['gemini-2.0-flash'],

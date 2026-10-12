@@ -43,6 +43,8 @@ class ApiConstants {
   static const String cancelSubscription = '/api/subscription/cancel';
   static const String checkout = '/api/subscription/checkout';
   static const String verifyPayment = '/api/subscription/verify-payment';
+  static const String mockUpgrade = '/api/subscription/mock-upgrade';
+  static const String generationStatus = '/api/subscription/generation-status';
 
   // Admin endpoints
   static const String adminPlans = '/api/admin/plans';
@@ -50,6 +52,7 @@ class ApiConstants {
   static const String adminCredits = '/api/admin/credits';
   static const String adminAssignPlan = '/api/admin/assign-plan';
   static const String adminToggleAiAccess = '/api/admin/toggle-ai-access';
+  static const String adminToggleUnlimited = '/api/admin/toggle-unlimited-generations';
   static const String adminAnalyticsOverview = '/api/admin/analytics/overview';
   static const String adminAnalyticsUsage = '/api/admin/analytics/usage';
   static const String adminAuditLogs = '/api/admin/audit-logs';

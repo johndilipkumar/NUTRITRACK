@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { prisma } from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
@@ -36,15 +37,62 @@ export const analyzeFoodImage = async (
       throw new AppError(503, globalCheck.reason || 'AI service temporarily disabled.');
     }
 
-    // 2. Check user quota
-    const quota = await checkQuota(userId);
-    if (!quota.allowed) {
-      throw new AppError(402, quota.reason || 'Insufficient quota.');
-    }
+    // Check if user has unlimited generations
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, unlimitedGenerations: true },
+    });
 
-    // 3. Reserve credits (estimate: 1500 input + 500 output)
-    const estimatedCredits = calculateCredits(1500, 500);
-    const { reservationId } = await reserveCredits(userId, quota.subscription.id, estimatedCredits);
+    const isUnlimited = user?.unlimitedGenerations === true || user?.role === 'admin';
+
+    let reservationId: string | null = null;
+    let subscriptionId: string | null = null;
+
+    if (!isUnlimited) {
+      // 1.5 Check generation limit (simple count of successful analyses in billing period)
+      const subscription = await prisma.userSubscription.findFirst({
+        where: {
+          userId,
+          status: { in: ['active', 'trialing', 'past_due'] },
+        },
+        include: { plan: true },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!subscription) {
+        throw new AppError(402, 'No active subscription. Please subscribe to a plan.');
+      }
+
+      const generationsUsed = await prisma.usageEvent.count({
+        where: {
+          userId,
+          status: 'completed',
+          createdAt: {
+            gte: subscription.billingPeriodStart,
+            lte: subscription.billingPeriodEnd,
+          },
+        },
+      });
+
+      if (generationsUsed >= subscription.plan.generationLimit) {
+        throw new AppError(402,
+          `You've reached your generation limit (${subscription.plan.generationLimit}) for this billing period. ` +
+          `Upgrade your plan to access a higher generation allowance.`
+        );
+      }
+
+      // 2. Check user quota (credit-based)
+      const quota = await checkQuota(userId);
+      if (!quota.allowed) {
+        throw new AppError(402, quota.reason || 'Insufficient quota.');
+      }
+
+      // 3. Reserve credits (estimate: 1500 input + 500 output)
+      const estimatedCredits = calculateCredits(1500, 500);
+      const res = await reserveCredits(userId, quota.subscription.id, estimatedCredits);
+      reservationId = res.reservationId;
+      subscriptionId = quota.subscription.id;
+    }
 
     // Get the absolute path to the uploaded file for Gemini
     const imagePath = getImagePath(req.file.filename);
@@ -57,17 +105,34 @@ export const analyzeFoodImage = async (
       const durationMs = Date.now() - startTime;
 
       // 5. Reconcile reservation
-      const actualCredits = calculateCredits(usage.inputTokens, usage.outputTokens);
-      await reconcileReservation(
-        reservationId,
-        actualCredits,
-        quota.subscription.id,
-        usage.inputTokens,
-        usage.outputTokens,
-        'completed',
-        undefined,
-        durationMs
-      );
+      if (reservationId && subscriptionId) {
+        const actualCredits = calculateCredits(usage.inputTokens, usage.outputTokens);
+        await reconcileReservation(
+          reservationId,
+          actualCredits,
+          subscriptionId,
+          usage.inputTokens,
+          usage.outputTokens,
+          'completed',
+          undefined,
+          durationMs
+        );
+      } else {
+        // Log completed generation event for unlimited user
+        await prisma.usageEvent.create({
+          data: {
+            userId,
+            requestId: crypto.randomUUID(),
+            provider: 'google',
+            model: 'gemini-2.0-flash',
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            applicationCreditsCharged: 0,
+            status: 'completed',
+            durationMs,
+          },
+        });
+      }
 
       // Check if food was detected
       if (analysis.items.length === 0) {
@@ -93,8 +158,10 @@ export const analyzeFoodImage = async (
         },
       });
     } catch (analysisError) {
-      // Release reservation on failure
-      await releaseReservation(reservationId, quota.subscription.id);
+      // Release reservation on failure if one exists
+      if (reservationId && subscriptionId) {
+        await releaseReservation(reservationId, subscriptionId);
+      }
       throw analysisError;
     }
   } catch (error) {

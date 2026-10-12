@@ -83,6 +83,21 @@ class AdminService {
     );
   }
 
+  Future<void> toggleUnlimitedGenerations({
+    required String userId,
+    required bool enabled,
+    String? reason,
+  }) async {
+    await _dio.post(
+      ApiConstants.adminToggleUnlimited,
+      data: {
+        'userId': userId,
+        'enabled': enabled,
+        'reason': reason ?? 'Admin toggle',
+      },
+    );
+  }
+
   // -- Analytics --
   Future<Map<String, dynamic>> getOverview({int days = 30}) async {
     final response = await _dio.get(
